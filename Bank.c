@@ -4,15 +4,27 @@
 void welcome_message();
 void creat_account_in_AC_file();
 void login();
+void Bank_fetures();
+void check_balance();
 
 int isLoggedIn = 0;
+int choice;
 
 
 int main()
 {
     welcome_message();
 
-    //working on!
+    if(isLoggedIn == 1)
+    {
+        Bank_fetures();
+
+        switch (choice)
+        {
+            case 1: check_balance();
+                break;
+        }
+    }
 
 }
 
@@ -117,19 +129,19 @@ void logout()
 
 void Bank_fetures()
 {
-    if(isLoggedIn)    
-    {
-        printf("What would you like to do today?\n\n\n");
-        printf("1. Check Balance\n");
-        printf("2. Deposite Funds\n");
-        printf("3. Withdraw Funds\n");
-        printf("4. Transfer Funds\n");
-        printf("5. View transfer history\n");
-        printf("6. Logout\n");
-    }
-}
+    printf("What would you like to do today?\n\n\n");
+    printf("1. Check Balance\n");
+    printf("2. Deposite Funds\n");
+    printf("3. Withdraw Funds\n");
+    printf("4. Transfer Funds\n");
+    printf("5. View transfer history\n");
+    printf("6. Logout\n");
+    printf("7. Shutdown the application.");
+    printf("Chose an option: ");
+    scanf("%d", choice);
+}    
 
-void check_balance_form_balance_file()
+void check_balance()
 {
     if(isLoggedIn)
     {
