@@ -2,10 +2,11 @@
 #include <string.h>
 
 void welcome_message();
-void creat_account_in_AC_file();
+void creat_account();
 void login();
 void Bank_fetures();
 void check_balance();
+void deposite_funds();
 
 int isLoggedIn = 0;
 int choice;
@@ -23,6 +24,8 @@ int main()
         {
             case 1: check_balance();
                 break;
+            case 2: deposite_funds();
+                break;   
         }
     }
 
@@ -49,7 +52,7 @@ void welcome_message()
     }
 }
 
-void creat_account_in_AC_file()
+void creat_account()
 {
     char name[50];
     char address[100];
@@ -163,7 +166,7 @@ void check_balance()
     }
 }
 
-void deposite_funds_to_balance_file()
+void deposite_funds()
 {
     if(isLoggedIn)
     {
