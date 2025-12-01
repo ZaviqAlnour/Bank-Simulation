@@ -7,6 +7,9 @@ void login();
 void Bank_fetures();
 void check_balance();
 void deposite_funds();
+void withdraw_funds();
+void trasfer_funds_between_accounts();
+void view_transfer_history();
 
 int isLoggedIn = 0;
 int choice;
@@ -25,21 +28,27 @@ int main()
             case 1: check_balance();
                 break;
             case 2: deposite_funds();
-                break;   
+                break;
+            case 3: withdraw_funds();
+                break;
+            case 4: trasfer_funds_between_accounts();
+                break;
         }
     }
 
+    return 0;
 }
 
 
 void welcome_message()
 {
-     int account;
+    int account;
     printf("Welcome to daily C Bank\n");
     printf("Your trusted partner in financial service.\n");
     printf("We offer a range od service to meet your banking needs.\n");
-    printf("Do you have a ACCOUNT with us?\n 1. YES\n 2.NO\n");
+    printf("Do you have a ACCOUNT with us?\n1. YES\n2. NO\n");
     scanf("%d", &account);
+
     if(account == 1)
     {
         printf("Welcome back! Please Login to your account.\n");
@@ -47,10 +56,11 @@ void welcome_message()
     }
     else 
     {
-        printf("Great! Please proceed to create your account.\n Fill in the necessary details.\n");
-        creat_account_in_AC_file();
+        printf("Great! Please proceed to create your account.\nFill in the necessary details.\n");
+        creat_account();
     }
 }
+
 
 void creat_account()
 {
@@ -59,34 +69,46 @@ void creat_account()
     char phon[50];
     char email[50];
     char password[20];
+
     FILE *file = fopen("AC_file.txt", "a");
     if(file == NULL)
     {
         printf("ERROR opening file.\n");
         return;
     }
+
     printf("Enter your Name: ");
-    scanf(" %[^\n]s", name);
+    scanf(" %[^\n]", name);
+
     printf("Enter your Address: ");
-    scanf(" %[^\n]s", address);
+    scanf(" %[^\n]", address);
+
     printf("Enter your phon Number: ");
-    scanf(" %[^\n]s", phon);
+    scanf(" %[^\n]", phon);
+
     printf("Enter your Email: ");
-    scanf(" %[^\n]s", email);
+    scanf(" %[^\n]", email);
+
     printf("Create a Password: ");
-    scanf(" %[^\n]s", password);
-    fprintf(file, "Name: %s\nAddress: %s\nPhon Number: %s\nEmail: %s\nPassword: %s\n\n", name, address, phon, email, password);
+    scanf(" %[^\n]", password);
+
+    fprintf(file, "Email: %s\nPassword: %s\n\n", email, password);
+
     printf("Account created successfully! You can now login to your account.\n");
     fclose(file);
 }
 
+
+
 void login()
 {
     char email[50], password[20];
+
     printf("Enter your Email: ");
-    scanf(" %[^\n]s", email);
+    scanf(" %[^\n]", email);
+
     printf("Enter your Account password: ");
-    scanf(" %[^\n]s", password);
+    scanf(" %[^\n]", password);
 
     FILE *file = fopen("AC_file.txt", "r");
     if(file == NULL)
@@ -94,55 +116,55 @@ void login()
         printf("ERROR opening file.\n");
         return;
     }
+
+    char line[200];
     char file_email[50], file_password[20];
     int found = 0;
-    while(fscanf(file, "Name: %*[^\\n]\\nAddress: %*[^\\n]\\nPhon Number: %*[^\\n]\\nEmail: %49[^\n]\\nPassword: %19[^\n]\\n\n", file_email, file_password))
+
+    while(fgets(line, sizeof(line), file))
     {
-        if(strcmp(email, file_email) == 0 & strcmp(password, file_password) == 0)
+        if(sscanf(line, "Email: %49[^\n]", file_email) == 1)
         {
-            found = 1;
-            break;
+            fgets(line, sizeof(line), file);  
+            sscanf(line, "Password: %19[^\n]", file_password);
+
+            if(strcmp(email, file_email) == 0 && strcmp(password, file_password) == 0)
+            {
+                found = 1;
+                break;
+            }
         }
     }
 
+    fclose(file);
+
     if(found)
     {
-        printf("Login successful! Welcome back to your account.\n");
+        printf("Login Successfully! Welcome back to your account.\n");
         isLoggedIn = 1;
     }
     else
     {
         printf("Login failed! Incorrect Email or Password.\n");
     }
-    fclose(file);
 }
 
-void logout()
-{
-    if(isLoggedIn)
-    {
-        isLoggedIn = 0;
-        printf("You have been logged out SUCCESSFULLY.\n");
-    }
-    else
-    {
-        printf("You are not logged in.\n");
-    }
-}
+
 
 void Bank_fetures()
 {
-    printf("What would you like to do today?\n\n\n");
+    printf("What would you like to do today?\n");
     printf("1. Check Balance\n");
     printf("2. Deposite Funds\n");
     printf("3. Withdraw Funds\n");
     printf("4. Transfer Funds\n");
     printf("5. View transfer history\n");
     printf("6. Logout\n");
-    printf("7. Shutdown the application.");
-    printf("Chose an option: ");
-    scanf("%d", choice);
+    printf("7. Shutdown the application.\n");
+    printf("Choose an option: ");
+    scanf("%d", &choice);
 }    
+
 
 void check_balance()
 {
@@ -166,6 +188,7 @@ void check_balance()
     }
 }
 
+
 void deposite_funds()
 {
     if(isLoggedIn)
@@ -173,37 +196,47 @@ void deposite_funds()
         float amount;
         printf("Enter amount to deposite: ");
         scanf("%f", &amount);
+
         FILE *file = fopen("balance_file.txt", "r+");
         if(file == NULL)
         {
             printf("ERROR opening balance file.\n");
             return;
         }
+
         float balance;
         fscanf(file, "%f", &balance);
+
         balance += amount;
+
         fseek(file, 0, SEEK_SET);
         fprintf(file, "%.2f", balance);
+
         printf("Deposited $%.2f SUCCESSFULLY. New balance: $%.2f\n", amount, balance);
+
         fclose(file);
     }
 }
 
-void withdraw_funds_from_balance_file()
+
+void withdraw_funds()
 {
     if(isLoggedIn)
     {
         float amount;
         printf("Enter amount to withdraw: ");
         scanf("%f", &amount);
+
         FILE *file = fopen("balance_file.txt", "r+");
         if(file == NULL)
         {
             printf("ERROR opening balance file.\n");
             return;
         }
+
         float balance;
         fscanf(file, "%f", &balance);
+
         if(amount > balance)
         {
             printf("Insufficient funds. Your current balance is: $%.2f\n", balance);
@@ -214,8 +247,9 @@ void withdraw_funds_from_balance_file()
             fseek(file, 0, SEEK_SET);
             fprintf(file, "%.2f", balance);
             printf("Withdrew $%.2f SUCCESSFULLY. New balance: $%.2f\n", amount, balance);   
-            fclose(file);
         }
+
+        fclose(file);
     }
     else
     {
@@ -224,35 +258,53 @@ void withdraw_funds_from_balance_file()
     }
 }
 
+
 void trasfer_funds_between_accounts()
 {
     if(isLoggedIn)
     {
         char recipient_email[50];
         float amount;
+
         printf("Enter recipient's Email: ");
-        scanf(" %[^\n]s", recipient_email);
+        scanf(" %[^\n]", recipient_email);
+
         printf("Enter amount to transfer: ");
         scanf("%f", &amount);
+
         FILE *file = fopen("balance_file.txt", "r+");
         if(file == NULL)
         {
             printf("ERROR opening balance file.\n");
             return;
         }
+
         float balance;
         fscanf(file, "%f", &balance);
+
         if(amount > balance)
         {
             printf("Insufficient funds. Your current balance is: $%.2f\n", balance);
+            fclose(file);
+            return;
+        }
+
+        balance -= amount;
+        fseek(file, 0, SEEK_SET);
+        fprintf(file, "%.2f", balance);
+        fclose(file);
+
+        printf("Transferred $%.2f to %s SUCCESSFULLY. New balance: %.2f\n", amount, recipient_email, balance);
+
+        FILE *history = fopen("history.txt", "a");
+        if(history != NULL)
+        {
+            fprintf(history, "Transferred $%.2f to %s | New Balance: %.2f\n", amount, recipient_email, balance);
+            fclose(history);
         }
         else
         {
-            balance -= amount;
-            fseek(file, 0, SEEK_SET);
-            fprintf(file, "%.2f", balance);
-            printf("Transferred $%.2f to %s SUCCESSFULLY. New balance: $%.2f\n", amount, recipient_email, balance);
-            fclose(file);
+            printf("ERROR writing to history file.\n");
         }
     }
     else 
@@ -262,10 +314,11 @@ void trasfer_funds_between_accounts()
     }
 }
 
+
 void view_transfer_history()
 {
     if(isLoggedIn)    
     {
-        printf("Working on!");
+        //Working on
     }
 }
