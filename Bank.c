@@ -12,6 +12,7 @@ void trasfer_funds_between_accounts();
 void view_transfer_history();
 
 int isLoggedIn = 0;
+int acNumber;
 int choice;
 
 
@@ -43,23 +44,41 @@ int main()
 void welcome_message()
 {
     int account;
+
     printf("Welcome to daily C Bank\n");
     printf("Your trusted partner in financial service.\n");
-    printf("We offer a range od service to meet your banking needs.\n");
-    printf("Do you have a ACCOUNT with us?\n1. YES\n2. NO\n");
-    scanf("%d", &account);
+    printf("We offer a range of services to meet your banking needs.\n");
+    printf("Do you have an ACCOUNT with us?\n");
+    printf("1. YES\n");
+    printf("2. NO\n");
+    printf("Enter your choice: ");
 
-    if(account == 1)
+    // Validate input
+    if (scanf("%d", &account) != 1)
     {
-        printf("Welcome back! Please Login to your account.\n");
+        printf("Invalid input. Please enter 1 or 2.\n");
+        // clear buffer
+        while (getchar() != '\n');
+        return;
+    }
+
+    if (account == 1)
+    {
+        printf("Welcome back! Please login to your account.\n");
         login();
     }
-    else 
+    else if (account == 2)
     {
-        printf("Great! Please proceed to create your account.\nFill in the necessary details.\n");
+        printf("Great! Please proceed to create your account.\n");
+        printf("Fill in the necessary details.\n");
         creat_account();
     }
+    else
+    {
+        printf("Invalid choice. Please restart and choose 1 or 2.\n");
+    }
 }
+
 
 
 void creat_account()
@@ -69,9 +88,11 @@ void creat_account()
     char phon[50];
     char email[50];
     char password[20];
+    char acnum[10];      // account number (must be < 8 chars)
+    int balance;         // initial deposit
 
     FILE *file = fopen("AC_file.txt", "a");
-    if(file == NULL)
+    if (file == NULL)
     {
         printf("ERROR opening file.\n");
         return;
@@ -83,7 +104,7 @@ void creat_account()
     printf("Enter your Address: ");
     scanf(" %[^\n]", address);
 
-    printf("Enter your phon Number: ");
+    printf("Enter your Phone Number: ");
     scanf(" %[^\n]", phon);
 
     printf("Enter your Email: ");
@@ -92,17 +113,63 @@ void creat_account()
     printf("Create a Password: ");
     scanf(" %[^\n]", password);
 
-    fprintf(file, "Email: %s\nPassword: %s\n\n", email, password);
+    // New Feature: Account Number
+    printf("Choose your Account Number (must be less than 8 characters): ");
+    scanf(" %[^\n]", acnum);
+
+    if (strlen(acnum) >= 8)
+    {
+        printf("Account creation failed! Account number must be less than 8 characters.\n");
+        fclose(file);
+        return;
+    }
+
+    // New Feature: Minimum Initial Deposit
+    printf("Deposit at least $1000 to create your account: ");
+    scanf("%d", &balance);
+
+    if (balance < 1000)
+    {
+        printf("Account creation failed! Minimum deposit is $1000.\n");
+        fclose(file);
+        return;
+    }
+
+    // Save all personal information
+    fprintf(file, "Name: %s\n", name);
+    fprintf(file, "Address: %s\n", address);
+    fprintf(file, "Phone: %s\n", phon);
+    fprintf(file, "Email: %s\n", email);
+    fprintf(file, "Password: %s\n", password);
+    fprintf(file, "Account Number: %s\n", acnum);
+    fprintf(file, "Balance: %d\n\n", balance);
+
+    fclose(file);
+
+    // Save account number + balance in second file
+    FILE *file2 = fopen("acNandBalance.txt", "a");
+    if (file2 == NULL)
+    {
+        printf("ERROR opening acNandBalance file.\n");
+        return;
+    }
+
+    fprintf(file2, "AccountNumber: %s\nBalance: %d\n\n", acnum, balance);
+    fclose(file2);
+
+    // Store in global variable
+    strcpy(acNumber, acnum);
 
     printf("Account created successfully! You can now login to your account.\n");
-    fclose(file);
 }
+
+
 
 
 
 void login()
 {
-    char email[50], password[20];
+    char email[50], password[20], acnum_input[10];
 
     printf("Enter your Email: ");
     scanf(" %[^\n]", email);
@@ -110,8 +177,11 @@ void login()
     printf("Enter your Account password: ");
     scanf(" %[^\n]", password);
 
+    printf("Enter your Account Number: ");
+    scanf(" %[^\n]", acnum_input);
+
     FILE *file = fopen("AC_file.txt", "r");
-    if(file == NULL)
+    if (file == NULL)
     {
         printf("ERROR opening file.\n");
         return;
@@ -119,52 +189,93 @@ void login()
 
     char line[200];
     char file_email[50], file_password[20];
-    int found = 0;
+    int email_pass_ok = 0;
 
-    while(fgets(line, sizeof(line), file))
+    while (fgets(line, sizeof(line), file))
     {
-        if(sscanf(line, "Email: %49[^\n]", file_email) == 1)
+        if (sscanf(line, "Email: %49[^\n]", file_email) == 1)
         {
-            fgets(line, sizeof(line), file);  
-            sscanf(line, "Password: %19[^\n]", file_password);
-
-            if(strcmp(email, file_email) == 0 && strcmp(password, file_password) == 0)
+            if (fgets(line, sizeof(line), file) != NULL)
             {
-                found = 1;
-                break;
+                sscanf(line, "Password: %19[^\n]", file_password);
+
+                if (strcmp(email, file_email) == 0 &&
+                    strcmp(password, file_password) == 0)
+                {
+                    email_pass_ok = 1;
+                    break;
+                }
             }
+
+            fgets(line, sizeof(line), file); // skip blank line
         }
     }
 
     fclose(file);
 
-    if(found)
-    {
-        printf("Login Successfully! Welcome back to your account.\n");
-        isLoggedIn = 1;
-    }
-    else
+    // If email+password failed  deny login immediately
+    if (!email_pass_ok)
     {
         printf("Login failed! Incorrect Email or Password.\n");
+        isLoggedIn = 0;
+        return;
     }
-}
 
+    FILE *file2 = fopen("acNandBalance.txt", "r");
+    if (file2 == NULL)
+    {
+        printf("ERROR opening acNandBalance file.\n");
+        return;
+    }
+
+    char file_acnum[10];
+    int balance;
+    int acnum_ok = 0;
+
+    while (fgets(line, sizeof(line), file2))
+    {
+        if (sscanf(line, "AccountNumber: %9[^\n]", file_acnum) == 1)
+        {
+            fgets(line, sizeof(line), file2); // Balance line
+            sscanf(line, "Balance: %d", &balance);
+
+            if (strcmp(acnum_input, file_acnum) == 0)
+            {
+                acnum_ok = 1;
+                break;
+            }
+        }
+    }
+
+    fclose(file2);
+
+    if (!acnum_ok)
+    {
+        printf("Login failed! Incorrect Account Number.\n");
+        isLoggedIn = 0;
+        return;
+    }
+
+    strcpy(acNumber, acnum_input);  // store globally
+
+    printf("Login Successfully! Welcome back to your account.\n");
+    isLoggedIn = 1;
+}
 
 
 void Bank_fetures()
 {
     printf("What would you like to do today?\n");
     printf("1. Check Balance\n");
-    printf("2. Deposite Funds\n");
+    printf("2. Deposit Funds\n");
     printf("3. Withdraw Funds\n");
     printf("4. Transfer Funds\n");
-    printf("5. View transfer history\n");
+    printf("5. View Transfer History\n");
     printf("6. Logout\n");
-    printf("7. Shutdown the application.\n");
+    printf("7. Shutdown the Application\n");
     printf("Choose an option: ");
     scanf("%d", &choice);
-}    
-
+}
 
 void check_balance()
 {
