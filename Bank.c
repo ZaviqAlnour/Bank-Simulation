@@ -281,51 +281,38 @@ void check_balance()
 {
     if(isLoggedIn)
     {
-        FILE *file = fopen("balance_file.txt", "r");
+        FILE *file = fopen("acNandBalance.txt", "r");
         if(file == NULL)
         {
             printf("ERROR opening balance file.\n");
             return;
         }
+
+        char file_acNumber[20];
         float balance;
-        fscanf(file, "%f", &balance);
-        printf("Your current balance is: $%.2f\n", balance);
+        int found = 0;
+
+        while(fscanf(file, "%s %f", file_acNumber, &balance) == 2)
+        {
+            if(strcmp(file_acNumber, acNumber) == 0) // Match account number
+            {
+                printf("Your current balance is: $%.2f\n", balance);
+                found = 1;
+                break;
+            }
+        }
+
+        if(!found)
+        {
+            printf("Account number not found. Please check your account.\n");
+        }
+
         fclose(file);
     }
     else
     {
         printf("Please login to your account to check balance.\n");
         login();
-    }
-}
-
-
-void deposite_funds()
-{
-    if(isLoggedIn)
-    {
-        float amount;
-        printf("Enter amount to deposite: ");
-        scanf("%f", &amount);
-
-        FILE *file = fopen("balance_file.txt", "r+");
-        if(file == NULL)
-        {
-            printf("ERROR opening balance file.\n");
-            return;
-        }
-
-        float balance;
-        fscanf(file, "%f", &balance);
-
-        balance += amount;
-
-        fseek(file, 0, SEEK_SET);
-        fprintf(file, "%.2f", balance);
-
-        printf("Deposited $%.2f SUCCESSFULLY. New balance: $%.2f\n", amount, balance);
-
-        fclose(file);
     }
 }
 
@@ -338,28 +325,70 @@ void withdraw_funds()
         printf("Enter amount to withdraw: ");
         scanf("%f", &amount);
 
-        FILE *file = fopen("balance_file.txt", "r+");
+        FILE *file = fopen("acNandBalance.txt", "r");
         if(file == NULL)
         {
             printf("ERROR opening balance file.\n");
             return;
         }
 
+        char file_acNumber[20];
         float balance;
-        fscanf(file, "%f", &balance);
+        int found = 0;
 
-        if(amount > balance)
+        // We'll read all accounts into memory first
+        typedef struct {
+            char acNumber[20];
+            float balance;
+        } Account;
+
+        Account accounts[100]; // assuming max 100 accounts
+        int count = 0;
+
+        while(fscanf(file, "%s %f", file_acNumber, &balance) == 2)
         {
-            printf("Insufficient funds. Your current balance is: $%.2f\n", balance);
+            strcpy(accounts[count].acNumber, file_acNumber);
+            accounts[count].balance = balance;
+            count++;
         }
-        else
+        fclose(file);
+
+        // Find the account
+        for(int i = 0; i < count; i++)
         {
-            balance -= amount;
-            fseek(file, 0, SEEK_SET);
-            fprintf(file, "%.2f", balance);
-            printf("Withdrew $%.2f SUCCESSFULLY. New balance: $%.2f\n", amount, balance);   
+            if(strcmp(accounts[i].acNumber, acNumber) == 0)
+            {
+                found = 1;
+                if(amount > accounts[i].balance)
+                {
+                    printf("Insufficient funds. Your current balance is: $%.2f\n", accounts[i].balance);
+                }
+                else
+                {
+                    accounts[i].balance -= amount;
+                    printf("Withdrawal SUCCESSFUL! Here is your $%.2f. New balance: $%.2f\n", amount, accounts[i].balance);
+                }
+                break;
+            }
         }
 
+        if(!found)
+        {
+            printf("Account number not found.\n");
+            return;
+        }
+
+        // Write updated balances back to file
+        file = fopen("acNandBalance.txt", "w");
+        if(file == NULL)
+        {
+            printf("ERROR opening balance file for writing.\n");
+            return;
+        }
+        for(int i = 0; i < count; i++)
+        {
+            fprintf(file, "%s %.2f\n", accounts[i].acNumber, accounts[i].balance);
+        }
         fclose(file);
     }
     else
@@ -370,47 +399,94 @@ void withdraw_funds()
 }
 
 
-void trasfer_funds_between_accounts()
+void transfer_funds_between_accounts()
 {
     if(isLoggedIn)
     {
-        char recipient_email[50];
+        char recipient_acNumber[20];
         float amount;
 
-        printf("Enter recipient's Email: ");
-        scanf(" %[^\n]", recipient_email);
+        printf("Enter recipient's Account Number: ");
+        scanf(" %[^\n]", recipient_acNumber);
 
         printf("Enter amount to transfer: ");
         scanf("%f", &amount);
 
-        FILE *file = fopen("balance_file.txt", "r+");
+        FILE *file = fopen("acNandBalance.txt", "r");
         if(file == NULL)
         {
             printf("ERROR opening balance file.\n");
             return;
         }
 
-        float balance;
-        fscanf(file, "%f", &balance);
+        // Load all accounts into memory
+        typedef struct {
+            char acNumber[20];
+            float balance;
+        } Account;
 
-        if(amount > balance)
+        Account accounts[100]; // assuming max 100 accounts
+        int count = 0;
+
+        while(fscanf(file, "%s %f", accounts[count].acNumber, &accounts[count].balance) == 2)
         {
-            printf("Insufficient funds. Your current balance is: $%.2f\n", balance);
-            fclose(file);
+            count++;
+        }
+        fclose(file);
+
+        int sender_index = -1, recipient_index = -1;
+        for(int i = 0; i < count; i++)
+        {
+            if(strcmp(accounts[i].acNumber, acNumber) == 0)
+                sender_index = i;
+            if(strcmp(accounts[i].acNumber, recipient_acNumber) == 0)
+                recipient_index = i;
+        }
+
+        if(sender_index == -1)
+        {
+            printf("Your account number not found.\n");
+            return;
+        }
+        if(recipient_index == -1)
+        {
+            printf("Recipient account number not found.\n");
+            return;
+        }
+        if(amount > accounts[sender_index].balance)
+        {
+            printf("Insufficient funds. Your current balance is: $%.2f\n", accounts[sender_index].balance);
             return;
         }
 
-        balance -= amount;
-        fseek(file, 0, SEEK_SET);
-        fprintf(file, "%.2f", balance);
+        // Perform transfer
+        accounts[sender_index].balance -= amount;
+        accounts[recipient_index].balance += amount;
+
+        // Write updated balances back to file
+        file = fopen("acNandBalance.txt", "w");
+        if(file == NULL)
+        {
+            printf("ERROR writing balance file.\n");
+            return;
+        }
+        for(int i = 0; i < count; i++)
+        {
+            fprintf(file, "%s %.2f\n", accounts[i].acNumber, accounts[i].balance);
+        }
         fclose(file);
 
-        printf("Transferred $%.2f to %s SUCCESSFULLY. New balance: %.2f\n", amount, recipient_email, balance);
+        printf("Transferred $%.2f to account %s SUCCESSFULLY. New balance: %.2f\n",
+               amount, recipient_acNumber, accounts[sender_index].balance);
 
-        FILE *history = fopen("history.txt", "a");
+        // Write transfer history to sender's file
+        char history_file[50];
+        sprintf(history_file, "%s.txt", acNumber);
+        FILE *history = fopen(history_file, "a");
         if(history != NULL)
         {
-            fprintf(history, "Transferred $%.2f to %s | New Balance: %.2f\n", amount, recipient_email, balance);
+            fprintf(history, "Transferred $%.2f to %s | New Balance: %.2f\n",
+                    amount, recipient_acNumber, accounts[sender_index].balance);
             fclose(history);
         }
         else
@@ -418,7 +494,7 @@ void trasfer_funds_between_accounts()
             printf("ERROR writing to history file.\n");
         }
     }
-    else 
+    else
     {
         printf("Please login to your account to transfer funds.\n");
         login();
