@@ -1,8 +1,8 @@
 # Daily C Bank - C Console Banking Simulation
 
-This is a **simple console-based banking system** written in C. It allows users to:
+This is a simple, console-based banking system written in C. It allows users to:
 
-- Create accounts with personal details and initial deposit
+- Create accounts with personal details and an initial deposit
 - Login with email, password, and account number
 - Check balance
 - Deposit funds
@@ -36,7 +36,7 @@ Key points about this project:
 5. **Withdraw Funds:** Withdraw money from the account and update the transaction history.  
 6. **Transfer Funds:** Transfer money to another user’s account and record transactions for both sender and recipient.  
 7. **View Transaction History:** Each user has a separate file recording all deposits, withdrawals, and transfers.  
-8. **Logout:** Securely logout of the account.  
+8. **Logout:** Securely log out of the account.  
 
 ---
 
@@ -49,7 +49,7 @@ Compile the code using a C compiler (e.g., gcc):
 
 bash
 Copy code
-gcc main.c -o bank
+GCC Bank.c -o bank
 Run the program:
 
 bash
